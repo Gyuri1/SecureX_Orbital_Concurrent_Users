@@ -1,8 +1,8 @@
 {
   "workflow": {
-    "unique_name": "definition_workflow_01SO8E5C8TP46322acidrcody0ULAVyGWc5",
-    "name": "Alert-on-User-Visiting-Too-Many-Endpoints",
-    "title": "Alert-on-User-Visiting-Too-Many-Endpoints",
+    "unique_name": "definition_workflow_01TQKUOP51PKQ4j1Gq2G0P8U71pRcy1CZNE",
+    "name": "Alert-on-Concurrent-Users",
+    "title": "Alert-on-Concurrent-Users",
     "type": "generic.workflow",
     "base_type": "workflow",
     "variables": [
@@ -16,7 +16,7 @@
           "is_required": false,
           "is_invisible": false
         },
-        "unique_name": "variable_workflow_01SO8E5CIELWH31O1AMyrpnVKXACjIAjwWe",
+        "unique_name": "variable_workflow_01TQKUOPHAU960iMrIaSitWAOB4qBTGlFam",
         "object_type": "variable_workflow"
       }
     ],
@@ -26,7 +26,7 @@
       },
       "delete_workflow_instance": false,
       "description": "Workflow Description:\nWhen triggered, this workflow will review machines and local users in Orbital and send a Webex Alert on new user. \n\nWorkflow Requirements:\n\n\nLooged-in User\nSELECT user, type as \"login_type\", tty as \"device_name\", host as \"remote_hostname\", DATETIME(time, \"unixepoch\", \"UTC\") AS time, pid, sid FROM logged_in_users WHERE user!=\"\";\nThis workflow requires the Orbital_Credentials and Webex Teams Bot credentials. \nPlease verify these settings prior to execution.\n\n\nOUTPUT: SHOULD BE AN EMAIL ",
-      "display_name": "Alert-on-User-Visiting-Too-Many-Endpoints",
+      "display_name": "Alert-on-Concurrent-Users",
       "runtime_user": {
         "override_target_runtime_user": false,
         "specify_on_workflow_start": false,
@@ -56,7 +56,7 @@
     "object_type": "definition_workflow",
     "actions": [
       {
-        "unique_name": "definition_activity_01SOAIYQCIVOA7F7or58s1nhIuCJaWV6Rt2",
+        "unique_name": "definition_activity_01TQKUOTIUQKE3RD1YtLV3cKrsRwdP2vcp2",
         "name": "Threat Response - Generate Access Token",
         "title": "Threat Response - Generate Access Token",
         "type": "workflow.atomic_workflow",
@@ -76,7 +76,7 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SO8GMRZXFJH3UK5Yv3kILNWXuvZff4pQp",
+        "unique_name": "definition_activity_01TQKUOUWT9TG1rfb9l3mDare1nD2ob6HQe",
         "name": "Orbital - Query All Endpoints",
         "title": "Orbital - Query All Endpoints",
         "type": "workflow.atomic_workflow",
@@ -89,8 +89,10 @@
             "variable_workflow_01PP74XXDJ7U10PBSYZl7md3gg6krQ03p57": "SELECT user, type as \"login_type\", tty as \"device_name\", host as \"remote_hostname\", DATETIME(time, \"unixepoch\", \"UTC\") AS time, pid, sid FROM logged_in_users WHERE user!=\"\";",
             "variable_workflow_01PP74XXDJ95H0lvwlcEnTPXWXQgvbbTKe6": "",
             "variable_workflow_01PP74XXDJAL33MsBJCm3Iptr9I5iu7pLvI": "CRO_SecureX_logged_in_users",
-            "variable_workflow_01PP74XXDJFAH5HLlFGbENuXfD77aWNTPrF": "$activity.definition_activity_01SOAIYQCIVOA7F7or58s1nhIuCJaWV6Rt2.output.variable_workflow_01PP75S3G7CJY6WAQr2IJC7qga2SIoE09gQ$",
-            "variable_workflow_01PP74XXDJGFR2b0QKga75DJjqwiX0K9Nbt": 2
+            "variable_workflow_01PP74XXDJFAH5HLlFGbENuXfD77aWNTPrF": "$activity.definition_activity_01TQKUOTIUQKE3RD1YtLV3cKrsRwdP2vcp2.output.variable_workflow_01PP75S3G7CJY6WAQr2IJC7qga2SIoE09gQ$",
+            "variable_workflow_01PP74XXDJGFR2b0QKga75DJjqwiX0K9Nbt": 2,
+            "variable_workflow_01SW2GRR9R9EH4rSK7JBaDZjavxyl8SX0UR": "0",
+            "variable_workflow_01SW2H938IB3V0XwjYGxkRaW62xKwJH0gwF": ""
           },
           "runtime_user": {
             "target_default": true
@@ -106,7 +108,7 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SO8E5IPCEE6099pUEPGISBzlvp3lj7VzA",
+        "unique_name": "definition_activity_01TQKUOW5P7QK7I3CoBfLqs1GMGYLwAX7Cg",
         "name": "Execute Python Script",
         "title": "Parse Orbital response",
         "type": "python3.script",
@@ -117,7 +119,7 @@
           "display_name": "Parse Orbital response",
           "script": "import sys,json\njson_data = json.loads(sys.argv[1])\noutList = []\ntotalusers = 0\ncolumns= [\"user\",\"login_type\",\"device_name\",\"remote_hostname\",\"time\",\"pid\",\"sid\" ]\ndatalen=len(columns)\n\nfor item in json_data:\n  if item['hostinfo']:\n    if item['hostinfo']['hostname']:\n      hostname=item['hostinfo']['hostname']\n    else:\n      hostname=\"NoHostInfo\"\n  else:\n    hostname=\"NoHostInfo\"\n\n  if len(item['osQueryResult']):\n    if item['osQueryResult'][0]['values']:\n      users= item['osQueryResult'][0]['values']\n      db=len(users)//len(columns)\n      for i in range(db):\n        username=item['osQueryResult'][0]['values'][0+i*len(columns)]\n        logintime=item['osQueryResult'][0]['values'][4+i*len(columns)]\n        totalusers =totalusers+1\n        outList.append({ \"username\":username, \"hostname\":hostname,\"logintime\": logintime })\n        \noutList2 = []\ntotalsameusers=0\nfor item in outList:\n  for item1 in outList:\n    if item != item1 and item[\"username\"] == item1[\"username\"]: \n     outList2.append(item)\n     totalsameusers=totalsameusers+1\n\noutJson = json.dumps(outList2)",
           "script_arguments": [
-            "$activity.definition_activity_01SO8GMRZXFJH3UK5Yv3kILNWXuvZff4pQp.output.variable_workflow_01PP74XXDJBRP6hhz6uRRyhmvLv1NKZQnt9$"
+            "$activity.definition_activity_01TQKUOUWT9TG1rfb9l3mDare1nD2ob6HQe.output.variable_workflow_01PP74XXDJBRP6hhz6uRRyhmvLv1NKZQnt9$"
           ],
           "script_queries": [
             {
@@ -136,7 +138,7 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SO8E5JHMF2I6aXbJjFI06bJGqrzQLvErn",
+        "unique_name": "definition_activity_01TQKUOX6YZSZ0P4NCHAU0xoaDIgzq924qY",
         "name": "Read Table from JSON",
         "title": "Read Table from JSON",
         "type": "corejava.read_table_from_json",
@@ -145,7 +147,7 @@
           "action_timeout": 180,
           "continue_on_failure": false,
           "display_name": "Read Table from JSON",
-          "input_json": "$activity.definition_activity_01SO8E5IPCEE6099pUEPGISBzlvp3lj7VzA.output.script_queries.outJson$",
+          "input_json": "$activity.definition_activity_01TQKUOW5P7QK7I3CoBfLqs1GMGYLwAX7Cg.output.script_queries.outJson$",
           "jsonpath_query": "$",
           "persist_output": true,
           "populate_columns": false,
@@ -168,7 +170,7 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SO8E5KFKQ4W7R4BSmyETXw7wEPjKnPt9H",
+        "unique_name": "definition_activity_01TQKUOYEDT5Y6u79EvGItR5gRueatwnY27",
         "name": "For Each",
         "title": "For Each",
         "type": "logic.for_each",
@@ -177,12 +179,12 @@
           "continue_on_failure": false,
           "display_name": "For Each",
           "skip_execution": false,
-          "source_array": "$activity.definition_activity_01SO8E5JHMF2I6aXbJjFI06bJGqrzQLvErn.output.read_table_from_json$"
+          "source_array": "$activity.definition_activity_01TQKUOX6YZSZ0P4NCHAU0xoaDIgzq924qY.output.read_table_from_json$"
         },
         "object_type": "definition_activity",
         "actions": [
           {
-            "unique_name": "definition_activity_01SX5WR8QE9TA0nFxby4XUPPXFsZuFdNFnQ",
+            "unique_name": "definition_activity_01TQKUP02JAID4ibnkIYGtrWF4RBh3yzr2Y",
             "name": "Webex Teams - Post Message to Room",
             "title": "Webex Teams - Post Message to Room",
             "type": "workflow.atomic_workflow",
@@ -193,8 +195,9 @@
               "input": {
                 "variable_workflow_01PP78DJH1TI76BYfsu9g0Tqj2S6cUxjtu5": "$global.variable_01J42D66BAFE425Y4LCaygldf8YO0v5Z9in.global.variable_01J42D66BAFE425Y4LCaygldf8YO0v5Z9in$",
                 "variable_workflow_01PP78DJH1XNQ7gNQ5iZdperRHqrppzARXC": "$global.variable_01J3Z3BMDL0KS3TWUEiO4ZN6fE3VjDifKsx.global.variable_01J3Z3BMDL0KS3TWUEiO4ZN6fE3VjDifKsx$",
-                "variable_workflow_01PP78DJH1YWL3allalGQbg1VkgKwh9GvCi": "Alert! Same User:\nusername: $activity.definition_activity_01SO8E5KFKQ4W7R4BSmyETXw7wEPjKnPt9H.input.source_array[@].username$\nhostname: $activity.definition_activity_01SO8E5KFKQ4W7R4BSmyETXw7wEPjKnPt9H.input.source_array[@].hostname$\nlogintime: $activity.definition_activity_01SO8E5KFKQ4W7R4BSmyETXw7wEPjKnPt9H.input.source_array[@].logintime$",
-                "variable_workflow_01PP78DJH22BB3Ej3I8tJ4OCQur0unYGjj9": ""
+                "variable_workflow_01PP78DJH1YWL3allalGQbg1VkgKwh9GvCi": "Alert! Same User:\nusername: $activity.definition_activity_01TQKUOYEDT5Y6u79EvGItR5gRueatwnY27.input.source_array[@].username$\nhostname: $activity.definition_activity_01TQKUOYEDT5Y6u79EvGItR5gRueatwnY27.input.source_array[@].hostname$\nlogintime: $activity.definition_activity_01TQKUOYEDT5Y6u79EvGItR5gRueatwnY27.input.source_array[@].logintime$",
+                "variable_workflow_01PP78DJH22BB3Ej3I8tJ4OCQur0unYGjj9": "",
+                "variable_workflow_01SVERQNMKN8N6vqX2djMtAfshphGydGsH8": ""
               },
               "runtime_user": {
                 "target_default": true
@@ -331,8 +334,8 @@
     }
   },
   "atomic_workflows": [
-    "definition_workflow_01PP75S3LTBW4420OZU3rdHWKHFnE6aC7yH",
     "definition_workflow_01PP74XXLH4JK5RznBkKvbBUhiBqVm0A35C",
-    "definition_workflow_01PP78DJMXS415nTjonujf03ROkr6t2PNyw"
+    "definition_workflow_01PP78DJMXS415nTjonujf03ROkr6t2PNyw",
+    "definition_workflow_01PP75S3LTBW4420OZU3rdHWKHFnE6aC7yH"
   ]
 }

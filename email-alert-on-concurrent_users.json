@@ -1,8 +1,8 @@
 {
   "workflow": {
-    "unique_name": "definition_workflow_01SXL38RG2TJ60zz30pm70uT4Cu7t0byBFf",
-    "name": "Email-Alert-on-User-Visiting-Too-Many-Endpoints",
-    "title": "Email-Alert-on-User-Visiting-Too-Many-Endpoints",
+    "unique_name": "definition_workflow_01TQKXBKK1VUG6kyUR2HXhtkQTzvmzmyBiR",
+    "name": "Email-Alert-on-Concurrent-Users",
+    "title": "Email-Alert-on-Concurrent-Users",
     "type": "generic.workflow",
     "base_type": "workflow",
     "variables": [
@@ -16,7 +16,7 @@
           "is_required": false,
           "is_invisible": false
         },
-        "unique_name": "variable_workflow_01SXL38RM49KH3ECpNzp0LUqAuqBt6ygZYc",
+        "unique_name": "variable_workflow_01TQKXBKPRJR71he527EusgY5FUff9UpVVp",
         "object_type": "variable_workflow"
       }
     ],
@@ -26,7 +26,7 @@
       },
       "delete_workflow_instance": false,
       "description": "Workflow Description:\nWhen triggered, this workflow will review machines and local users in Orbital and send a Webex Alert on new user. \n\nWorkflow Requirements:\n\n\nLooged-in User\nSELECT user, type as \"login_type\", tty as \"device_name\", host as \"remote_hostname\", DATETIME(time, \"unixepoch\", \"UTC\") AS time, pid, sid FROM logged_in_users WHERE user!=\"\";\nThis workflow requires the Orbital_Credentials and Webex Teams Bot credentials. \nPlease verify these settings prior to execution.\n\n\nOUTPUT: SHOULD BE AN EMAIL ",
-      "display_name": "Email-Alert-on-User-Visiting-Too-Many-Endpoints",
+      "display_name": "Email-Alert-on-Concurrent-Users",
       "runtime_user": {
         "override_target_runtime_user": false,
         "specify_on_workflow_start": false,
@@ -56,7 +56,7 @@
     "object_type": "definition_workflow",
     "actions": [
       {
-        "unique_name": "definition_activity_01SXL38VAWLIQ38lbkE30PDCrGqs2FnItnZ",
+        "unique_name": "definition_activity_01TQKXBO2B1Q933X5PZN63YY9cJ7kvLlsu5",
         "name": "Threat Response - Generate Access Token",
         "title": "Threat Response - Generate Access Token",
         "type": "workflow.atomic_workflow",
@@ -76,7 +76,7 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SXL38WK8TIT2RXA32bUf7eVWUDDlXKiPQ",
+        "unique_name": "definition_activity_01TQKXBPF7EFD12QWe2SIrBeGNLtmzVU2VY",
         "name": "Orbital - Query All Endpoints",
         "title": "Orbital - Query All Endpoints",
         "type": "workflow.atomic_workflow",
@@ -89,8 +89,10 @@
             "variable_workflow_01PP74XXDJ7U10PBSYZl7md3gg6krQ03p57": "SELECT user, type as \"login_type\", tty as \"device_name\", host as \"remote_hostname\", DATETIME(time, \"unixepoch\", \"UTC\") AS time, pid, sid FROM logged_in_users WHERE user!=\"\";",
             "variable_workflow_01PP74XXDJ95H0lvwlcEnTPXWXQgvbbTKe6": "",
             "variable_workflow_01PP74XXDJAL33MsBJCm3Iptr9I5iu7pLvI": "CRO_SecureX_logged_in_users",
-            "variable_workflow_01PP74XXDJFAH5HLlFGbENuXfD77aWNTPrF": "$activity.definition_activity_01SXL38VAWLIQ38lbkE30PDCrGqs2FnItnZ.output.variable_workflow_01PP75S3G7CJY6WAQr2IJC7qga2SIoE09gQ$",
-            "variable_workflow_01PP74XXDJGFR2b0QKga75DJjqwiX0K9Nbt": 2
+            "variable_workflow_01PP74XXDJFAH5HLlFGbENuXfD77aWNTPrF": "$activity.definition_activity_01TQKXBO2B1Q933X5PZN63YY9cJ7kvLlsu5.output.variable_workflow_01PP75S3G7CJY6WAQr2IJC7qga2SIoE09gQ$",
+            "variable_workflow_01PP74XXDJGFR2b0QKga75DJjqwiX0K9Nbt": 2,
+            "variable_workflow_01SW2GRR9R9EH4rSK7JBaDZjavxyl8SX0UR": "0",
+            "variable_workflow_01SW2H938IB3V0XwjYGxkRaW62xKwJH0gwF": ""
           },
           "runtime_user": {
             "target_default": true
@@ -106,7 +108,7 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SXL38XRRS380XYq27G8vsbZqJflLaFWHL",
+        "unique_name": "definition_activity_01TQKXBQFYGSX3H8YF2wN2GSmrV84I47Jd0",
         "name": "Execute Python Script",
         "title": "Parse Orbital response",
         "type": "python3.script",
@@ -117,7 +119,7 @@
           "display_name": "Parse Orbital response",
           "script": "import sys,json\njson_data = json.loads(sys.argv[1])\noutList = []\ntotalusers = 0\ncolumns= [\"user\",\"login_type\",\"device_name\",\"remote_hostname\",\"time\",\"pid\",\"sid\" ]\ndatalen=len(columns)\n\nfor item in json_data:\n  if item['hostinfo']:\n    if item['hostinfo']['hostname']:\n      hostname=item['hostinfo']['hostname']\n    else:\n      hostname=\"NoHostInfo\"\n  else:\n    hostname=\"NoHostInfo\"\n\n  if len(item['osQueryResult']):\n    if item['osQueryResult'][0]['values']:\n      users= item['osQueryResult'][0]['values']\n      db=len(users)//len(columns)\n      for i in range(db):\n        username=item['osQueryResult'][0]['values'][0+i*len(columns)]\n        logintime=item['osQueryResult'][0]['values'][4+i*len(columns)]\n        totalusers =totalusers+1\n        outList.append({ \"username\":username, \"hostname\":hostname,\"logintime\": logintime })\n        \noutList2 = []\ntotalsameusers=0\nfor item in outList:\n  for item1 in outList:\n    if item != item1 and item[\"username\"] == item1[\"username\"]: \n     outList2.append(item)\n     totalsameusers=totalsameusers+1\n\noutJson = json.dumps(outList2)",
           "script_arguments": [
-            "$activity.definition_activity_01SXL38WK8TIT2RXA32bUf7eVWUDDlXKiPQ.output.variable_workflow_01PP74XXDJBRP6hhz6uRRyhmvLv1NKZQnt9$"
+            "$activity.definition_activity_01TQKXBPF7EFD12QWe2SIrBeGNLtmzVU2VY.output.variable_workflow_01PP74XXDJBRP6hhz6uRRyhmvLv1NKZQnt9$"
           ],
           "script_queries": [
             {
@@ -136,14 +138,14 @@
         "object_type": "definition_activity"
       },
       {
-        "unique_name": "definition_activity_01SXL3Y0HSVLE5NkBp6dZ1gnhaYJucQn3ZR",
+        "unique_name": "definition_activity_01TQKXBRTBKPF5gc1Iyxjj6BLvZ9T7ynFAY",
         "name": "Send Email",
         "title": "Send Email",
         "type": "email.smtp_send_email",
         "base_type": "activity",
         "properties": {
           "action_timeout": 180,
-          "body": "Alert!\nNumber of Same Users: $activity.definition_activity_01SXL38XRRS380XYq27G8vsbZqJflLaFWHL.output.script_queries.totalsameusers$\nDetails: \n$activity.definition_activity_01SXL38XRRS380XYq27G8vsbZqJflLaFWHL.output.script_queries.outJson$",
+          "body": "Alert!\nNumber of Same Users: $activity.definition_activity_01TQKXBQFYGSX3H8YF2wN2GSmrV84I47Jd0.output.script_queries.totalsameusers$\nDetails: \n$activity.definition_activity_01TQKXBQFYGSX3H8YF2wN2GSmrV84I47Jd0.output.script_queries.outJson$",
           "continue_if_one_address_valid": false,
           "continue_on_failure": false,
           "display_name": "Send Email",
