@@ -1,0 +1,274 @@
+{
+  "workflow": {
+    "unique_name": "definition_workflow_01SXL38RG2TJ60zz30pm70uT4Cu7t0byBFf",
+    "name": "Email-Alert-on-User-Visiting-Too-Many-Endpoints",
+    "title": "Email-Alert-on-User-Visiting-Too-Many-Endpoints",
+    "type": "generic.workflow",
+    "base_type": "workflow",
+    "variables": [
+      {
+        "schema_id": "datatype.string",
+        "properties": {
+          "value": "",
+          "scope": "local",
+          "name": "orbital-response",
+          "type": "datatype.string",
+          "is_required": false,
+          "is_invisible": false
+        },
+        "unique_name": "variable_workflow_01SXL38RM49KH3ECpNzp0LUqAuqBt6ygZYc",
+        "object_type": "variable_workflow"
+      }
+    ],
+    "properties": {
+      "atomic": {
+        "is_atomic": false
+      },
+      "delete_workflow_instance": false,
+      "description": "Workflow Description:\nWhen triggered, this workflow will review machines and local users in Orbital and send a Webex Alert on new user. \n\nWorkflow Requirements:\n\n\nLooged-in User\nSELECT user, type as \"login_type\", tty as \"device_name\", host as \"remote_hostname\", DATETIME(time, \"unixepoch\", \"UTC\") AS time, pid, sid FROM logged_in_users WHERE user!=\"\";\nThis workflow requires the Orbital_Credentials and Webex Teams Bot credentials. \nPlease verify these settings prior to execution.\n\n\nOUTPUT: SHOULD BE AN EMAIL ",
+      "display_name": "Email-Alert-on-User-Visiting-Too-Many-Endpoints",
+      "runtime_user": {
+        "override_target_runtime_user": false,
+        "specify_on_workflow_start": false,
+        "target_default": true
+      },
+      "target": {
+        "execute_on_target_group": true,
+        "target_group": {
+          "target_group_id": "target_group_01EJ0TQWPQWBD0qiWqClJKj9FOzwiZRfOFH",
+          "run_on_all_targets": false,
+          "selected_target_types": [
+            "web-service.endpoint"
+          ],
+          "use_criteria": {
+            "choose_target_using_algorithm": "choose_first_with_matching_criteria",
+            "conditions": [
+              {
+                "operator": "eqi",
+                "left_operand": "$targetgroup.web-service endpoint.input.display_name$",
+                "right_operand": "Orbital_For_Access_Token"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "object_type": "definition_workflow",
+    "actions": [
+      {
+        "unique_name": "definition_activity_01SXL38VAWLIQ38lbkE30PDCrGqs2FnItnZ",
+        "name": "Threat Response - Generate Access Token",
+        "title": "Threat Response - Generate Access Token",
+        "type": "workflow.atomic_workflow",
+        "base_type": "subworkflow",
+        "properties": {
+          "continue_on_failure": false,
+          "display_name": "Threat Response - Generate Access Token",
+          "runtime_user": {
+            "target_default": true
+          },
+          "skip_execution": false,
+          "target": {
+            "use_workflow_target_group": true
+          },
+          "workflow_id": "definition_workflow_01PP75S3LTBW4420OZU3rdHWKHFnE6aC7yH"
+        },
+        "object_type": "definition_activity"
+      },
+      {
+        "unique_name": "definition_activity_01SXL38WK8TIT2RXA32bUf7eVWUDDlXKiPQ",
+        "name": "Orbital - Query All Endpoints",
+        "title": "Orbital - Query All Endpoints",
+        "type": "workflow.atomic_workflow",
+        "base_type": "subworkflow",
+        "properties": {
+          "continue_on_failure": false,
+          "display_name": "Orbital - Query All Endpoints",
+          "input": {
+            "variable_workflow_01PP74XXDJ6I02lUbtpjEKbDd7y0gpOYS4y": true,
+            "variable_workflow_01PP74XXDJ7U10PBSYZl7md3gg6krQ03p57": "SELECT user, type as \"login_type\", tty as \"device_name\", host as \"remote_hostname\", DATETIME(time, \"unixepoch\", \"UTC\") AS time, pid, sid FROM logged_in_users WHERE user!=\"\";",
+            "variable_workflow_01PP74XXDJ95H0lvwlcEnTPXWXQgvbbTKe6": "",
+            "variable_workflow_01PP74XXDJAL33MsBJCm3Iptr9I5iu7pLvI": "CRO_SecureX_logged_in_users",
+            "variable_workflow_01PP74XXDJFAH5HLlFGbENuXfD77aWNTPrF": "$activity.definition_activity_01SXL38VAWLIQ38lbkE30PDCrGqs2FnItnZ.output.variable_workflow_01PP75S3G7CJY6WAQr2IJC7qga2SIoE09gQ$",
+            "variable_workflow_01PP74XXDJGFR2b0QKga75DJjqwiX0K9Nbt": 2
+          },
+          "runtime_user": {
+            "target_default": true
+          },
+          "skip_execution": false,
+          "target": {
+            "override_workflow_target": true,
+            "target_id": "definition_target_01G3W9FAY8HW82T7kwnV77WDzY456qx1yHD",
+            "target_type": "web-service.endpoint"
+          },
+          "workflow_id": "definition_workflow_01PP74XXLH4JK5RznBkKvbBUhiBqVm0A35C"
+        },
+        "object_type": "definition_activity"
+      },
+      {
+        "unique_name": "definition_activity_01SXL38XRRS380XYq27G8vsbZqJflLaFWHL",
+        "name": "Execute Python Script",
+        "title": "Parse Orbital response",
+        "type": "python3.script",
+        "base_type": "activity",
+        "properties": {
+          "action_timeout": 180,
+          "continue_on_failure": false,
+          "display_name": "Parse Orbital response",
+          "script": "import sys,json\njson_data = json.loads(sys.argv[1])\noutList = []\ntotalusers = 0\ncolumns= [\"user\",\"login_type\",\"device_name\",\"remote_hostname\",\"time\",\"pid\",\"sid\" ]\ndatalen=len(columns)\n\nfor item in json_data:\n  if item['hostinfo']:\n    if item['hostinfo']['hostname']:\n      hostname=item['hostinfo']['hostname']\n    else:\n      hostname=\"NoHostInfo\"\n  else:\n    hostname=\"NoHostInfo\"\n\n  if len(item['osQueryResult']):\n    if item['osQueryResult'][0]['values']:\n      users= item['osQueryResult'][0]['values']\n      db=len(users)//len(columns)\n      for i in range(db):\n        username=item['osQueryResult'][0]['values'][0+i*len(columns)]\n        logintime=item['osQueryResult'][0]['values'][4+i*len(columns)]\n        totalusers =totalusers+1\n        outList.append({ \"username\":username, \"hostname\":hostname,\"logintime\": logintime })\n        \noutList2 = []\ntotalsameusers=0\nfor item in outList:\n  for item1 in outList:\n    if item != item1 and item[\"username\"] == item1[\"username\"]: \n     outList2.append(item)\n     totalsameusers=totalsameusers+1\n\noutJson = json.dumps(outList2)",
+          "script_arguments": [
+            "$activity.definition_activity_01SXL38WK8TIT2RXA32bUf7eVWUDDlXKiPQ.output.variable_workflow_01PP74XXDJBRP6hhz6uRRyhmvLv1NKZQnt9$"
+          ],
+          "script_queries": [
+            {
+              "script_query": "outJson",
+              "script_query_name": "outJson",
+              "script_query_type": "string"
+            },
+            {
+              "script_query": "totalsameusers",
+              "script_query_name": "totalsameusers",
+              "script_query_type": "string"
+            }
+          ],
+          "skip_execution": false
+        },
+        "object_type": "definition_activity"
+      },
+      {
+        "unique_name": "definition_activity_01SXL3Y0HSVLE5NkBp6dZ1gnhaYJucQn3ZR",
+        "name": "Send Email",
+        "title": "Send Email",
+        "type": "email.smtp_send_email",
+        "base_type": "activity",
+        "properties": {
+          "action_timeout": 180,
+          "body": "Alert!\nNumber of Same Users: $activity.definition_activity_01SXL38XRRS380XYq27G8vsbZqJflLaFWHL.output.script_queries.totalsameusers$\nDetails: \n$activity.definition_activity_01SXL38XRRS380XYq27G8vsbZqJflLaFWHL.output.script_queries.outJson$",
+          "continue_if_one_address_valid": false,
+          "continue_on_failure": false,
+          "display_name": "Send Email",
+          "from": "test@securex.com",
+          "runtime_user": {
+            "target_default": true
+          },
+          "skip_execution": false,
+          "subject": "Same User Alert",
+          "target": {
+            "override_workflow_target": true,
+            "target_id": "definition_target_01SXSRZMJ31HV63wRoJOEl9nX46cZwiWl80"
+          },
+          "to": "gacs@cisco.com"
+        },
+        "object_type": "definition_activity"
+      }
+    ],
+    "categories": [
+      "category_01EI33LMFFL7N5eTQLsOOJIrxdlSOHb7r3r"
+    ]
+  },
+  "categories": {
+    "category_01EI33LMFFL7N5eTQLsOOJIrxdlSOHb7r3r": {
+      "unique_name": "category_01EI33LMFFL7N5eTQLsOOJIrxdlSOHb7r3r",
+      "name": "SecureX",
+      "title": "SecureX",
+      "type": "basic.category",
+      "base_type": "category",
+      "category_type": "custom",
+      "object_type": "category"
+    }
+  },
+  "targets": {
+    "definition_target_01G3W9FAY8HW82T7kwnV77WDzY456qx1yHD": {
+      "unique_name": "definition_target_01G3W9FAY8HW82T7kwnV77WDzY456qx1yHD",
+      "name": "Orbital_Target",
+      "title": "Orbital_Target",
+      "type": "web-service.endpoint",
+      "base_type": "target",
+      "object_type": "definition_target",
+      "properties": {
+        "default_runtime_user_id": "definition_runtime_user_01G3W9DWHEOQQ6V6W5Fp9jDtHloNFfWmXyQ",
+        "description": "Orbital_Target",
+        "disable_certificate_validation": false,
+        "display_name": "Orbital_Target",
+        "host": "orbital.amp.cisco.com",
+        "no_runtime_user": false,
+        "path": "/v0",
+        "port": 443,
+        "protocol": "https"
+      }
+    },
+    "definition_target_01SXSRZMJ31HV63wRoJOEl9nX46cZwiWl80": {
+      "unique_name": "definition_target_01SXSRZMJ31HV63wRoJOEl9nX46cZwiWl80",
+      "name": "t-email",
+      "title": "t-email",
+      "type": "email.smtp_endpoint",
+      "base_type": "target",
+      "object_type": "definition_target",
+      "properties": {
+        "default_runtime_user_id": "definition_runtime_user_01SXSQE3QUO3M44tzd2bmbhf2eHFpI6pUXY",
+        "display_name": "t-email",
+        "no_runtime_user": false,
+        "port": 25,
+        "protocol": "SMTP",
+        "server": "mail.t-email.hu"
+      }
+    }
+  },
+  "runtime_users": {
+    "definition_runtime_user_01G3W9DWHEOQQ6V6W5Fp9jDtHloNFfWmXyQ": {
+      "unique_name": "definition_runtime_user_01G3W9DWHEOQQ6V6W5Fp9jDtHloNFfWmXyQ",
+      "name": "Orbital_Credentials",
+      "title": "Orbital_Credentials",
+      "description": "Account Key for Orbital",
+      "type": "runtime_user.web-service_basic_credentials",
+      "base_type": "runtime_user",
+      "object_type": "definition_runtime_user",
+      "properties": {
+        "auth_option": "*****",
+        "basic_password": "*****",
+        "basic_username": "*****",
+        "display_name": "Orbital_Credentials"
+      }
+    },
+    "definition_runtime_user_01SXSQE3QUO3M44tzd2bmbhf2eHFpI6pUXY": {
+      "unique_name": "definition_runtime_user_01SXSQE3QUO3M44tzd2bmbhf2eHFpI6pUXY",
+      "name": "t-email",
+      "title": "t-email",
+      "type": "runtime_user.email_credentials",
+      "base_type": "runtime_user",
+      "object_type": "definition_runtime_user",
+      "properties": {
+        "display_name": "t-email",
+        "password": "*****",
+        "sender": "*****"
+      }
+    }
+  },
+  "target_groups": {
+    "target_group_01EJ0TQWPQWBD0qiWqClJKj9FOzwiZRfOFH": {
+      "unique_name": "target_group_01EJ0TQWPQWBD0qiWqClJKj9FOzwiZRfOFH",
+      "name": "Default TargetGroup",
+      "title": "Default TargetGroup",
+      "type": "generic.target_group",
+      "base_type": "target_group",
+      "version": "1.0.0",
+      "targets": [
+        {
+          "data_target_type": "web-service.endpoint",
+          "view_target_type": "web-service.endpoint",
+          "include_all_targets": true
+        },
+        {
+          "data_target_type": "email.smtp_endpoint",
+          "view_target_type": "email.smtp_endpoint",
+          "include_all_targets": true
+        }
+      ],
+      "object_type": "target_group"
+    }
+  },
+  "atomic_workflows": [
+    "definition_workflow_01PP75S3LTBW4420OZU3rdHWKHFnE6aC7yH",
+    "definition_workflow_01PP74XXLH4JK5RznBkKvbBUhiBqVm0A35C"
+  ]
+}
